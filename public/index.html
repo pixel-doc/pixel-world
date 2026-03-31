@@ -34,10 +34,10 @@
     }
     #panel {
       position: fixed;
-      top: 20px;
+      top: 80px;
       right: 20px;
       width: 320px;
-      max-height: calc(100vh - 100px);
+      max-height: calc(100vh - 140px);
       background: rgba(10, 10, 20, 0.92);
       border: 1px solid #7af7ff;
       border-radius: 8px;
@@ -47,6 +47,21 @@
       overflow-y: auto;
       box-shadow: 0 0 20px rgba(122, 247, 255, 0.15);
     }
+    #panel.closed { display: none; }
+    #toggle-panel {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      background: rgba(10, 10, 20, 0.9);
+      border: 1px solid #7af7ff;
+      color: #7af7ff;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      z-index: 101;
+    }
+    #toggle-panel:hover { background: rgba(30, 30, 50, 0.95); }
     #panel h2 {
       color: #7af7ff;
       font-size: 14px;
@@ -110,10 +125,11 @@
   <div id="visitors"></div>
   <canvas id="canvas"></canvas>
 
-  <div id="panel">
+  <div id="panel" class="closed">
     <div style="margin-bottom: 12px;">
       <span class="tab active" data-tab="tasks">Tasks</span>
       <span class="tab" data-tab="notes">Notes</span>
+      <span id="close-panel" style="float:right;cursor:pointer;color:#888;">✕</span>
     </div>
     <div id="section-tasks" class="section active">
       <textarea id="tasks-editor"></textarea>
@@ -124,6 +140,8 @@
       <button class="btn" id="save-notes">Save</button>
     </div>
   </div>
+
+  <button id="toggle-panel">Tasks & Notes</button>
 
   <script type="importmap">
   {

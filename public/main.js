@@ -354,6 +354,19 @@ console.log('Pixel World loaded!');
 // === Tasks & Notes Panel ===
 const tasksEditor = document.getElementById('tasks-editor');
 const notesEditor = document.getElementById('notes-editor');
+const panel = document.getElementById('panel');
+const toggleBtn = document.getElementById('toggle-panel');
+
+// Toggle panel open/closed
+toggleBtn.addEventListener('click', () => {
+  panel.classList.remove('closed');
+  toggleBtn.style.display = 'none';
+});
+
+document.getElementById('close-panel').addEventListener('click', () => {
+  panel.classList.add('closed');
+  toggleBtn.style.display = 'block';
+});
 
 // Tab switching
 document.querySelectorAll('.tab').forEach(tab => {
