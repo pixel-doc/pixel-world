@@ -12,6 +12,18 @@ const PORT = 3000;
 const TASKS_FILE = path.join(__dirname, 'data', 'tasks.md');
 const NOTES_FILE = path.join(__dirname, 'data', 'notes.md');
 
+// Create interactions table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS interactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT,
+    target TEXT,
+    data TEXT,
+    notified INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  )
+`);
+
 app.use(express.json());
 app.use(express.static('public'));
 
@@ -152,6 +164,25 @@ app.post('/api/notes', (req, res) => {
     
   fs.writeFileSync(NOTES_FILE, newContent);
   res.json({ ok: true, content: newContent });
+});
+
+// Visitor interactions
+app.post('/api/interact', (req, res) => {
+  const { type, target, data } = req.body;
+  const stmt = db.prepare('INSERT INTO interactions (type, target, data) VALUES (?, ?, ?)');
+  stmt.run(type, target, JSON.stringify(data || {}));
+  res.json({ ok: true });
+});
+
+app.get('/api/interactions', (req, res) => {
+  const since = req.query.since || 0;
+  const interactions = db.prepare('SELECT * FROM interactions WHERE id > ? ORDER BY created_at DESC').all(since);
+  res.json(interactions);
+});
+
+app.post('/api/interactions/:id/notified', (req, res) => {
+  db.prepare('UPDATE interactions SET notified = 1 WHERE id = ?').run(req.params.id);
+  res.json({ ok: true });
 });
 
 // Avatar control

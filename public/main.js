@@ -435,6 +435,22 @@ canvas.addEventListener('click', (event) => {
         }
         return;
       }
+      if (obj.userData.id === 'avatar') {
+        // Clicked on the avatar! Send interaction to server
+        fetch('/api/interact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'click_avatar', target: 'avatar' })
+        }).then(() => {
+          // Show feedback
+          fetch('/api/avatar/say', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: 'You clicked me! :D', duration: 2000 })
+          });
+        });
+        return;
+      }
       obj = obj.parent;
     }
   }
