@@ -191,12 +191,57 @@ function createPlant(type = 'flower') {
   return group;
 }
 
+// Signpost (clickable to open tasks panel)
+function createSignpost() {
+  const group = new THREE.Group();
+  group.userData.isSignpost = true;
+
+  // Post
+  const postGeo = new THREE.BoxGeometry(0.08, 1.2, 0.08);
+  const postMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, flatShading: true });
+  const post = new THREE.Mesh(postGeo, postMat);
+  post.position.y = 0.6;
+  group.add(post);
+
+  // Sign board
+  const signGeo = new THREE.BoxGeometry(0.5, 0.3, 0.05);
+  const signMat = new THREE.MeshStandardMaterial({ color: 0xD2691E, flatShading: true });
+  const sign = new THREE.Mesh(signGeo, signMat);
+  sign.position.y = 1.1;
+  sign.rotation.z = 0.1;
+  group.add(sign);
+
+  // Text "TASKS" using canvas texture
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#D2691E';
+  ctx.fillRect(0, 0, 128, 64);
+  ctx.fillStyle = '#FFF';
+  ctx.font = 'bold 24px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('TASKS', 64, 40);
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  const textMat = new THREE.MeshBasicMaterial({ map: texture });
+  const textGeo = new THREE.PlaneGeometry(0.45, 0.25);
+  const textMesh = new THREE.Mesh(textGeo, textMat);
+  textMesh.position.set(0, 1.1, 0.03);
+  textMesh.rotation.z = 0.1;
+  group.add(textMesh);
+
+  return group;
+}
+
 // Create mesh from object data
 function createMesh(obj) {
   if (obj.type === 'avatar') {
     return createAvatar();
   } else if (obj.type === 'plant') {
     return createPlant(obj.properties?.plantType || 'flower');
+  } else if (obj.type === 'signpost') {
+    return createSignpost();
   }
 
   // Default cube
@@ -246,6 +291,22 @@ function updateTextBubble(mesh, props) {
 function updateTime() {
   const now = new Date();
   timeEl.textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+}
+
+// Update visitor count
+async function updateVisitorCount(count) {
+  visitorsEl.textContent = `${count} visitor${count !== 1 ? 's' : ''} watching`;
+}
+
+// Load initial visitor count
+async function loadVisitorCount() {
+  try {
+    const res = await fetch('/api/visitors');
+    const { count } = await res.json();
+    updateVisitorCount(count);
+  } catch (e) {
+    console.error('Failed to load visitor count:', e);
+  }
 }
 
 // Load world state
@@ -315,6 +376,26 @@ ws.onmessage = (event) => {
   } else if (type === 'mood_changed') {
     console.log('Mood changed:', data.mood);
     // TODO: affect weather
+  } else if (type === 'visitor_joined') {
+    console.log('Visitor joined!', data);
+    // Make avatar wave and greet
+    if (data.isFirst) {
+      fetch('/api/avatar/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'wave', duration: 3000 })
+      });
+      setTimeout(() => {
+        fetch('/api/avatar/say', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: 'Hello, visitor! Welcome to my world!', duration: 5000 })
+        });
+      }, 1500);
+    }
+    updateVisitorCount(data.count);
+  } else if (type === 'visitor_left') {
+    updateVisitorCount(data.count);
   }
 };
 
@@ -327,6 +408,37 @@ window.addEventListener('resize', () => {
 
 let avatarAction = 'idle';
 let lastAvatarId = null;
+
+// Click detection for interactive objects
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+canvas.addEventListener('click', (event) => {
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(scene.children, true);
+  
+  for (const hit of intersects) {
+    // Find parent group that might be a special object
+    let obj = hit.object;
+    while (obj) {
+      if (obj.userData.isSignpost) {
+        // Toggle tasks panel
+        if (panel.classList.contains('closed')) {
+          panel.classList.remove('closed');
+          toggleBtn.style.display = 'none';
+        } else {
+          panel.classList.add('closed');
+          toggleBtn.style.display = 'block';
+        }
+        return;
+      }
+      obj = obj.parent;
+    }
+  }
+});
 
 // Animation loop
 function animate() {
@@ -348,6 +460,7 @@ function animate() {
 
 // Start
 loadWorld();
+loadVisitorCount();
 animate();
 console.log('Pixel World loaded!');
 

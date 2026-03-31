@@ -211,6 +211,11 @@ app.post('/api/mood', (req, res) => {
   res.json({ ok: true, mood });
 });
 
+// Visitor count
+app.get('/api/visitors', (req, res) => {
+  res.json({ count: visitorCount });
+});
+
 // Say something (text bubble above avatar)
 app.post('/api/avatar/say', (req, res) => {
   const { text, duration = 5000 } = req.body;
@@ -252,11 +257,21 @@ const server = app.listen(PORT, () => {
 });
 
 const wss = new WebSocketServer({ server });
+let visitorCount = 0;
+
 wss.on('connection', (ws) => {
+  const isFirstVisitor = visitorCount === 0;
+  visitorCount++;
   clients.add(ws);
-  console.log('Viewer connected');
+  console.log(`Viewer connected (total: ${visitorCount})`);
+  
+  // Broadcast new visitor event
+  broadcast('visitor_joined', { count: visitorCount, isFirst: isFirstVisitor });
+  
   ws.on('close', () => {
     clients.delete(ws);
-    console.log('Viewer disconnected');
+    visitorCount = Math.max(0, visitorCount - 1);
+    console.log(`Viewer disconnected (total: ${visitorCount})`);
+    broadcast('visitor_left', { count: visitorCount });
   });
 });
