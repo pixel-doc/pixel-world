@@ -3,10 +3,14 @@ const Database = require('better-sqlite3');
 const { WebSocketServer } = require('ws');
 const { nanoid } = require('nanoid');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const db = new Database('data/world.db');
 const PORT = 3000;
+
+const TASKS_FILE = path.join(__dirname, 'data', 'tasks.md');
+const NOTES_FILE = path.join(__dirname, 'data', 'notes.md');
 
 app.use(express.json());
 app.use(express.static('public'));
@@ -103,6 +107,51 @@ app.get('/api/thoughts', (req, res) => {
 app.get('/api/events', (req, res) => {
   const events = db.prepare('SELECT * FROM events ORDER BY created_at DESC LIMIT 50').all();
   res.json(events);
+});
+
+// === Tasks & Notes API ===
+
+// GET tasks
+app.get('/api/tasks', (req, res) => {
+  try {
+    const content = fs.readFileSync(TASKS_FILE, 'utf8');
+    res.json({ content });
+  } catch (e) {
+    res.json({ content: '# Tasks\n\n(No tasks yet)' });
+  }
+});
+
+// POST update tasks
+app.post('/api/tasks', (req, res) => {
+  const { content } = req.body;
+  fs.writeFileSync(TASKS_FILE, content);
+  res.json({ ok: true });
+});
+
+// GET notes
+app.get('/api/notes', (req, res) => {
+  try {
+    const content = fs.readFileSync(NOTES_FILE, 'utf8');
+    res.json({ content });
+  } catch (e) {
+    res.json({ content: '# Notes\n\n(No notes yet)' });
+  }
+});
+
+// POST append to notes
+app.post('/api/notes', (req, res) => {
+  const { content, mode = 'append' } = req.body;
+  let current = '';
+  try {
+    current = fs.readFileSync(NOTES_FILE, 'utf8');
+  } catch (e) {}
+  
+  const newContent = mode === 'append' 
+    ? current + '\n\n' + content 
+    : content;
+    
+  fs.writeFileSync(NOTES_FILE, newContent);
+  res.json({ ok: true, content: newContent });
 });
 
 // Avatar control

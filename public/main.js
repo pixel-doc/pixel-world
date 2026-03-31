@@ -350,3 +350,71 @@ function animate() {
 loadWorld();
 animate();
 console.log('Pixel World loaded!');
+
+// === Tasks & Notes Panel ===
+const tasksEditor = document.getElementById('tasks-editor');
+const notesEditor = document.getElementById('notes-editor');
+
+// Tab switching
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`section-${tab.dataset.tab}`).classList.add('active');
+  });
+});
+
+// Load tasks
+async function loadTasks() {
+  try {
+    const res = await fetch('/api/tasks');
+    const { content } = await res.json();
+    tasksEditor.value = content;
+  } catch (e) {
+    console.error('Failed to load tasks:', e);
+  }
+}
+
+// Save tasks
+document.getElementById('save-tasks').addEventListener('click', async () => {
+  try {
+    await fetch('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: tasksEditor.value })
+    });
+    alert('Tasks saved!');
+  } catch (e) {
+    alert('Failed to save tasks');
+  }
+});
+
+// Load notes
+async function loadNotes() {
+  try {
+    const res = await fetch('/api/notes');
+    const { content } = await res.json();
+    notesEditor.value = content;
+  } catch (e) {
+    console.error('Failed to load notes:', e);
+  }
+}
+
+// Save notes
+document.getElementById('save-notes').addEventListener('click', async () => {
+  try {
+    await fetch('/api/notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: notesEditor.value, mode: 'replace' })
+    });
+    alert('Notes saved!');
+  } catch (e) {
+    alert('Failed to save notes');
+  }
+});
+
+// Initial load
+loadTasks();
+loadNotes();

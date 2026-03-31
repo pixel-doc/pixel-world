@@ -32,6 +32,73 @@
       color: #7aff7a;
       font-size: 12px;
     }
+    #panel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 320px;
+      max-height: calc(100vh - 100px);
+      background: rgba(10, 10, 20, 0.92);
+      border: 1px solid #7af7ff;
+      border-radius: 8px;
+      padding: 16px;
+      color: #ccc;
+      font-size: 13px;
+      overflow-y: auto;
+      box-shadow: 0 0 20px rgba(122, 247, 255, 0.15);
+    }
+    #panel h2 {
+      color: #7af7ff;
+      font-size: 14px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #333;
+      padding-bottom: 8px;
+    }
+    #panel textarea {
+      width: 100%;
+      height: 200px;
+      background: #0a0a15;
+      border: 1px solid #333;
+      color: #ddd;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      padding: 8px;
+      border-radius: 4px;
+      resize: vertical;
+    }
+    #panel textarea:focus {
+      outline: none;
+      border-color: #7af7ff;
+    }
+    #panel .btn {
+      background: #7af7ff;
+      color: #0a0a15;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      margin-top: 8px;
+      margin-right: 8px;
+    }
+    #panel .btn:hover {
+      background: #fff;
+    }
+    #panel .tab {
+      display: inline-block;
+      padding: 6px 12px;
+      margin-right: 4px;
+      background: #222;
+      border-radius: 4px 4px 0 0;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    #panel .tab.active {
+      background: #333;
+      color: #7af7ff;
+    }
+    #panel .section { display: none; }
+    #panel .section.active { display: block; }
   </style>
 </head>
 <body>
@@ -42,6 +109,21 @@
   <div id="time"></div>
   <div id="visitors"></div>
   <canvas id="canvas"></canvas>
+
+  <div id="panel">
+    <div style="margin-bottom: 12px;">
+      <span class="tab active" data-tab="tasks">Tasks</span>
+      <span class="tab" data-tab="notes">Notes</span>
+    </div>
+    <div id="section-tasks" class="section active">
+      <textarea id="tasks-editor"></textarea>
+      <button class="btn" id="save-tasks">Save</button>
+    </div>
+    <div id="section-notes" class="section">
+      <textarea id="notes-editor"></textarea>
+      <button class="btn" id="save-notes">Save</button>
+    </div>
+  </div>
 
   <script type="importmap">
   {
