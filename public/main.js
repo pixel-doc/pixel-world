@@ -56,18 +56,23 @@ const objects = new Map();
 function createAvatar() {
   const group = new THREE.Group();
 
+  // Store body parts for animation
+  group.userData.parts = {};
+
   // Body
   const bodyGeo = new THREE.BoxGeometry(0.4, 0.6, 0.3);
   const bodyMat = new THREE.MeshStandardMaterial({ color: 0x7af7ff, emissive: 0x3a7a80 });
   const body = new THREE.Mesh(bodyGeo, bodyMat);
   body.position.y = 0.5;
   group.add(body);
+  group.userData.parts.body = body;
 
   // Head
   const headGeo = new THREE.BoxGeometry(0.35, 0.35, 0.35);
   const head = new THREE.Mesh(headGeo, bodyMat);
   head.position.y = 1.0;
   group.add(head);
+  group.userData.parts.head = head;
 
   // Eyes
   const eyeGeo = new THREE.BoxGeometry(0.08, 0.08, 0.05);
@@ -79,6 +84,17 @@ function createAvatar() {
   rightEye.position.set(0.08, 1.0, 0.18);
   group.add(rightEye);
 
+  // Arms
+  const armGeo = new THREE.BoxGeometry(0.1, 0.4, 0.1);
+  const leftArm = new THREE.Mesh(armGeo, bodyMat);
+  leftArm.position.set(-0.3, 0.5, 0);
+  group.add(leftArm);
+  group.userData.parts.leftArm = leftArm;
+  const rightArm = new THREE.Mesh(armGeo, bodyMat);
+  rightArm.position.set(0.3, 0.5, 0);
+  group.add(rightArm);
+  group.userData.parts.rightArm = rightArm;
+
   // Legs
   const legGeo = new THREE.BoxGeometry(0.12, 0.3, 0.12);
   const legMat = new THREE.MeshStandardMaterial({ color: 0x3a3a5a });
@@ -89,7 +105,63 @@ function createAvatar() {
   rightLeg.position.set(0.1, 0.15, 0);
   group.add(rightLeg);
 
+  // Action label (debug/visual stub)
+  const labelCanvas = document.createElement('canvas');
+  labelCanvas.width = 128;
+  labelCanvas.height = 32;
+  const labelCtx = labelCanvas.getContext('2d');
+  labelCtx.fillStyle = '#ff7af7';
+  labelCtx.font = 'bold 16px Courier New';
+  labelCtx.textAlign = 'center';
+  labelCtx.fillText('', 64, 20);
+  const labelTexture = new THREE.CanvasTexture(labelCanvas);
+  const labelMat = new THREE.SpriteMaterial({ map: labelTexture, transparent: true });
+  const actionLabel = new THREE.Sprite(labelMat);
+  actionLabel.scale.set(2, 0.5, 1);
+  actionLabel.position.y = 2.2;
+  group.add(actionLabel);
+  group.userData.parts.actionLabel = actionLabel;
+  group.userData.parts.labelCtx = labelCtx;
+  group.userData.parts.labelTexture = labelTexture;
+
   return group;
+}
+
+// Animate avatar based on action
+function animateAvatar(group, action, time) {
+  if (!group.userData.parts) return;
+  const { leftArm, rightArm, body, head, actionLabel, labelCtx, labelTexture } = group.userData.parts;
+
+  // Reset
+  leftArm.rotation.set(0, 0, 0);
+  rightArm.rotation.set(0, 0, 0);
+  body.position.y = 0.5;
+  group.position.y = 0;
+
+  // Visual stubs for actions
+  if (action === 'wave') {
+    leftArm.rotation.z = Math.sin(time * 8) * 0.8;
+    actionLabel && (labelCtx.fillStyle = '#ff7af7', labelCtx.fillText('Waving!', 64, 20), labelTexture.needsUpdate = true);
+  } else if (action === 'jump') {
+    group.position.y = Math.abs(Math.sin(time * 12)) * 0.5;
+    actionLabel && (labelCtx.fillStyle = '#7aff7a', labelCtx.fillText('Jumping!', 64, 20), labelTexture.needsUpdate = true);
+  } else if (action === 'dance') {
+    group.rotation.y = time * 6;
+    body.position.y = 0.5 + Math.sin(time * 10) * 0.1;
+    actionLabel && (labelCtx.fillStyle = '#ffff7a', labelCtx.fillText('Dancing!', 64, 20), labelTexture.needsUpdate = true);
+  } else if (action === 'sleep') {
+    group.rotation.x = Math.PI / 2;
+    group.position.y = 0.2;
+    actionLabel && (labelCtx.fillStyle = '#7af7ff', labelCtx.fillText('Sleeping...', 64, 20), labelTexture.needsUpdate = true);
+  } else if (action === 'walk') {
+    leftArm.rotation.x = Math.sin(time * 15) * 0.3;
+    rightArm.rotation.x = -Math.sin(time * 15) * 0.3;
+    actionLabel && (labelCtx.fillStyle = '#ffaa7a', labelCtx.fillText('Walking...', 64, 20), labelTexture.needsUpdate = true);
+  } else if (action === 'idle' || !action) {
+    // Subtle idle breathing
+    body.position.y = 0.5 + Math.sin(time * 2) * 0.02;
+    actionLabel && (labelCtx.clearRect(0, 0, 128, 32), labelTexture.needsUpdate = true);
+  }
 }
 
 // Simple plant
@@ -133,6 +205,43 @@ function createMesh(obj) {
   return new THREE.Mesh(geo, mat);
 }
 
+// Text bubble above avatar
+function updateTextBubble(mesh, props) {
+  if (!mesh.userData.bubble && props.say) {
+    // Create bubble
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 256;
+    canvas.height = 128;
+    
+    // Draw bubble
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 20px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const lines = props.say.match(/.{1,20}/g) || [props.say];
+    lines.forEach((line, i) => {
+      ctx.fillText(line, canvas.width / 2, 32 + i * 24);
+    });
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+    const sprite = new THREE.Sprite(material);
+    sprite.scale.set(3, 1.5, 1);
+    sprite.position.y = 2.5;
+    mesh.add(sprite);
+    mesh.userData.bubble = sprite;
+    mesh.userData.bubbleText = props.say;
+  } else if (mesh.userData.bubble && (!props.say || mesh.userData.bubbleText !== props.say)) {
+    // Remove old bubble
+    mesh.remove(mesh.userData.bubble);
+    mesh.userData.bubble = null;
+    mesh.userData.bubbleText = null;
+  }
+}
+
 // Update time display
 function updateTime() {
   const now = new Date();
@@ -158,6 +267,12 @@ async function loadWorld() {
       mesh.userData.id = obj.id;
       scene.add(mesh);
       objects.set(obj.id, mesh);
+      
+      // Set initial avatar state
+      if (obj.id === 'avatar' && obj.properties) {
+        const props = JSON.parse(obj.properties);
+        avatarAction = props.action || 'idle';
+      }
     });
 
     console.log(`Loaded ${objs.length} objects`);
@@ -183,6 +298,13 @@ ws.onmessage = (event) => {
       mesh.position.set(data.x, data.y, data.z);
       mesh.rotation.y = data.rotation;
       mesh.scale.setScalar(data.scale);
+      if (data.properties) {
+        const props = JSON.parse(data.properties);
+        if (data.type === 'avatar') {
+          updateTextBubble(mesh, props);
+          avatarAction = props.action || 'idle';
+        }
+      }
     }
   } else if (type === 'object_deleted') {
     const mesh = objects.get(data.id);
@@ -190,6 +312,9 @@ ws.onmessage = (event) => {
       scene.remove(mesh);
       objects.delete(data.id);
     }
+  } else if (type === 'mood_changed') {
+    console.log('Mood changed:', data.mood);
+    // TODO: affect weather
   }
 };
 
@@ -200,11 +325,24 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+let avatarAction = 'idle';
+let lastAvatarId = null;
+
 // Animation loop
 function animate() {
   requestAnimationFrame(animate);
+  
+  const time = performance.now() * 0.001;
+  
   controls.update();
   updateTime();
+  
+  // Animate avatar
+  const avatarMesh = objects.get('avatar');
+  if (avatarMesh) {
+    animateAvatar(avatarMesh, avatarAction, time);
+  }
+  
   renderer.render(scene, camera);
 }
 
