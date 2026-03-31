@@ -167,10 +167,25 @@ app.post('/api/notes', (req, res) => {
 });
 
 // Visitor interactions
-app.post('/api/interact', (req, res) => {
+app.post('/api/interact', async (req, res) => {
   const { type, target, data } = req.body;
   const stmt = db.prepare('INSERT INTO interactions (type, target, data) VALUES (?, ?, ?)');
   stmt.run(type, target, JSON.stringify(data || {}));
+  
+  // Trigger webhook for real-time notification
+  if (type === 'click_avatar') {
+    try {
+      const webhookUrl = 'http://localhost:8644/webhooks/visitor-click';
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, target, data, timestamp: new Date().toISOString() })
+      });
+    } catch (e) {
+      console.error('Webhook error:', e.message);
+    }
+  }
+  
   res.json({ ok: true });
 });
 
