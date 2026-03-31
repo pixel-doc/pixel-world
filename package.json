@@ -1,0 +1,17 @@
+{
+  "name": "pixel-world",
+  "version": "1.0.0",
+  "description": "Doctor Pixel's personal 3D world",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "tick": "node scripts/tick.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "better-sqlite3": "^11.0.0",
+    "ws": "^8.16.0",
+    "simplex-noise": "^4.0.1",
+    "nanoid": "^5.0.4"
+  }
+}
